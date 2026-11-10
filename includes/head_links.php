@@ -21,8 +21,13 @@
             /* keeps vertical scroll if needed */
         }
     </style>
+    <!-- 1. Global Lucide init -->
 
     <?php
     $primary_color = getData("color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ;
     $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ;
     ?>
+
+
+
+

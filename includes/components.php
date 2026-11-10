@@ -19,57 +19,59 @@ if (!function_exists('calculateSavePercent')) {
     }
 }
 
-/* ---------- Fetches cart rows for this customer ---------- */
+/* ---------- Theme 9 compatible cart lookup (refresh-safe) ----------
+   Theme 9 stores:
+   customer_cart.customer_id     = $cookie_id
+   customer_cart.product_id      = seller_products.id
+   customer_cart.other           = basic variant ID
+   customer_cart.advanced_variant= advanced variant ID
+*/
 if (!function_exists('getCartVariantIds')) {
-    function getCartVariantIds($customerId, $db)
+    function getCartVariantIds($cookieId, $productRowId, $db)
     {
-        $r = [
-            'product_ids'  => [],   // raw product_id column
-            'db_ids'       => [],   // seller_products.id (row id)
-            'advanced_ids' => [],
+        $result = [
+            'main'         => false,
             'basic_ids'    => [],
+            'advanced_ids' => [],
         ];
-        if (empty($customerId)) return $r;
+
+        if (empty($cookieId) || empty($productRowId) || !($db instanceof PDO)) {
+            return $result;
+        }
 
         try {
-            // Join to seller_products so we can also match by the row `id`
-            // (some flows store `product_id` = seller_products.id, others store
-            // the shop-level product_id column — we track both).
             $stmt = $db->prepare("
-                SELECT c.product_id, c.variant, c.advanced_variant, p.id AS row_id, p.product_id AS shop_pid
-                FROM customer_cart c
-                LEFT JOIN seller_products p
-                  ON p.product_id = c.product_id
-                 AND p.seller_id = ?
-                 AND p.store_id  = ?
-                WHERE c.customer_id = ?
+                SELECT other, advanced_variant
+                FROM customer_cart
+                WHERE customer_id = ? AND product_id = ?
             ");
-            $stmt->execute([$GLOBALS['sellerId'] ?? null, $GLOBALS['storeId'] ?? null, $customerId]);
+            $stmt->execute([$cookieId, $productRowId]);
 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $pid     = (string)($row['product_id'] ?? '');
-                $rowId   = (string)($row['row_id'] ?? '');
-                $shopPid = (string)($row['shop_pid'] ?? '');
-                $var     = (string)($row['variant'] ?? '');
-                $adv     = (string)($row['advanced_variant'] ?? '');
+                $basicId = trim((string)($row['other'] ?? ''));
+                $advancedId = trim((string)($row['advanced_variant'] ?? ''));
 
-                if ($pid)     $r['product_ids'][$pid]     = true;
-                if ($rowId)   $r['db_ids'][$rowId]        = true;
-                if ($shopPid) $r['product_ids'][$shopPid] = true;
-                if ($var)     $r['basic_ids'][$var]       = true;
-                if ($adv)     $r['advanced_ids'][$adv]    = true;
+                if ($advancedId !== '') {
+                    $result['advanced_ids'][$advancedId] = true;
+                } elseif ($basicId !== '') {
+                    $result['basic_ids'][$basicId] = true;
+                } else {
+                    $result['main'] = true;
+                    $result['basic_ids']['main'] = true; // <--- FIX APPLIED HERE
+                }
             }
         } catch (Throwable $e) {
-            // silent
+            error_log('[Theme 18 cart lookup] ' . $e->getMessage());
         }
-        return $r;
+
+        return $result;
     }
 }
 
 if (!function_exists('getProductHtml')) {
     function getProductHtml($id)
     {
-        global $storeCurrency, $storeUrl, $customerId, $db, $sellerId, $storeId,
+        global $storeCurrency, $storeUrl, $customerId, $cookie_id, $db, $sellerId, $storeId,
             $primary_color, $hover_color;
 
         $product_id  = getData("product_id", "seller_products", "id='$id'");
@@ -90,12 +92,10 @@ if (!function_exists('getProductHtml')) {
         $hasAdvanced = getData("id", "seller_product_advanced_variants", "product_id='$product_id'");
         $hasBasic    = getData("id", "seller_product_variants",          "product_id='$product_id'");
 
-        // ---- Cart from DB (refresh-safe) ----
-        $cart = getCartVariantIds($customerId ?? null, $db);
-
-        // Match by EITHER shop product_id OR DB row id
-        $isMainInCart = isset($cart['product_ids'][(string)$product_id])
-            || isset($cart['db_ids'][(string)$id]);
+        // ---- Cart from DB (same lookup used by Theme 9) ----
+        // Important: customer_id is the cart cookie ID and product_id is seller_products.id.
+        $cart = getCartVariantIds($cookie_id ?? null, $id, $db);
+        $isMainInCart = !empty($cart['main']);
 
         $advVariants     = [];
         $anyAdvInCart    = false;
@@ -198,13 +198,20 @@ if (!function_exists('getProductHtml')) {
             $inWishlist = getData("id", "customer_wishlists", "customer_id='$customerId' AND product_id='$id'") ? true : false;
         }
 
-        $hasAnyVariant = ($hasAdvanced || $hasBasic);
-        $outOfStock    = (!$hasAnyVariant && $totalStocks <= 0 && !$isUnlimited);
-        $cardInCart    = $hasAnyVariant ? ($anyAdvInCart || $anyBasicInCart) : $isMainInCart;
+        /* ============================================================
+           REFRESH-SAFE CART STATE (same logic as Theme 9)
+           ============================================================ */
+        $hasAnyVariant    = ($hasAdvanced || $hasBasic);
+        $anyVariantInCart = ($anyAdvInCart || $anyBasicInCart);
 
-        // For variant products: if some variants are already in cart, the card's
-        // cart button starts with the tick (via `is-in-cart` class).
-        $cartBtnInCartClass = $cardInCart ? ' is-in-cart' : '';
+        $showViewCartOnCard = false;
+        if (!$hasAnyVariant && $isMainInCart) {
+            $showViewCartOnCard = true;
+        } elseif ($hasBasic && !$hasAdvanced && $isMainInCart) {
+            $showViewCartOnCard = true;
+        }
+
+        $outOfStock = (!$hasAnyVariant && $totalStocks <= 0 && !$isUnlimited);
 
         $html  = '<article class="t18-card group min-w-0"';
         $html .= ' data-id="' . (int)$id . '"';
@@ -220,7 +227,7 @@ if (!function_exists('getProductHtml')) {
         $html .= ' data-primary="' . htmlspecialchars($primary_color) . '"';
         $html .= ' data-hover="' . htmlspecialchars($hover_color) . '"';
         $html .= ' data-variants="' . $variantJson . '"';
-        $html .= ' data-in-cart="' . ($cardInCart ? '1' : '0') . '"';
+        $html .= ' data-in-cart="' . ($showViewCartOnCard ? '1' : '0') . '"';
         $html .= ' data-also-bought="' . $alsoJson . '">';
 
         // ---- MEDIA ----
@@ -242,23 +249,7 @@ if (!function_exists('getProductHtml')) {
         $html .= ' data-id="' . (int)$id . '" aria-label="Wishlist" aria-pressed="' . ($inWishlist ? 'true' : 'false') . '">';
         $html .= '<i class="bi bi-heart"></i></button>';
 
-        $html .= '<div class="t18-actions">';
-        $html .= '<button type="button" class="t18-icon-btn openQuickView" data-id="' . (int)$id . '" aria-label="Quick view">';
-        $html .= '<i class="bi bi-eye-fill"></i></button>';
-
-        if ($outOfStock) {
-            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn is-disabled" disabled aria-label="Sold out">';
-            $html .= '<i class="bi bi-x-circle"></i></button>';
-        } else if ($hasAnyVariant) {
-            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn openQuickView' . $cartBtnInCartClass . '" data-id="' . (int)$id . '" aria-label="Add to cart">';
-            $html .= '<i class="bi bi-cart-plus-fill t18-icon-plus"></i>';
-            $html .= '<i class="bi bi-cart-check-fill t18-icon-tick"></i></button>';
-        } else {
-            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn t18-direct-add' . $cartBtnInCartClass . '" data-id="' . (int)$id . '" aria-label="Add to cart"' . ($cardInCart ? ' disabled' : '') . '>';
-            $html .= '<i class="bi bi-cart-plus-fill t18-icon-plus"></i>';
-            $html .= '<i class="bi bi-cart-check-fill t18-icon-tick"></i></button>';
-        }
-        $html .= '</div>';
+        // Close the image area before the product information.
         $html .= '</div>';
 
         // ---- INFO ----
@@ -270,6 +261,35 @@ if (!function_exists('getProductHtml')) {
         if ($mrp_price && $mrp_price > $price) {
             $html .= '<span class="t18-mrp">' . currencyToSymbol($storeCurrency) . number_format($mrp_price, 2) . '</span>';
         }
+        $html .= '</div>';
+
+        /* ============================================================
+           ADD-TO-CART / VIEW-CART BUTTON (refresh-safe)
+           ============================================================ */
+        $html .= '<div class="t18-actions t18-card-cart-row">';
+
+        if ($showViewCartOnCard) {
+            // Already in cart → View Cart
+            $html .= '<a href="' . htmlspecialchars($storeUrl . 'cart', ENT_QUOTES, 'UTF-8') . '" class="t18-icon-btn t18-view-cart-link">';
+            $html .= '<i class="bi bi-cart-check-fill"></i><span>View Cart</span></a>';
+        } elseif ($outOfStock) {
+            // Sold out
+            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn is-disabled" disabled aria-label="Sold out">';
+            $html .= '<i class="bi bi-x-circle"></i><span class="t18-add-label">Sold Out</span></button>';
+        } elseif ($hasAnyVariant) {
+            // Variant product → open Quick View. If any variant already in cart,
+            // show the tick (is-in-cart class) so user knows.
+            $partialClass = $anyVariantInCart ? ' is-in-cart' : '';
+            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn openQuickView' . $partialClass . '" data-id="' . (int)$id . '" aria-label="Add to cart">';
+            $html .= '<i class="bi bi-cart-plus-fill t18-icon-plus"></i>';
+            $html .= '<i class="bi bi-cart-check-fill t18-icon-tick"></i><span class="t18-add-label">Add to Cart</span></button>';
+        } else {
+            // Simple product → direct add
+            $html .= '<button type="button" class="t18-icon-btn t18-cart-btn t18-direct-add" data-id="' . (int)$id . '" aria-label="Add to cart">';
+            $html .= '<i class="bi bi-cart-plus-fill t18-icon-plus"></i>';
+            $html .= '<i class="bi bi-cart-check-fill t18-icon-tick"></i><span class="t18-add-label">Add to Cart</span></button>';
+        }
+
         $html .= '</div>';
         $html .= '</div>';
 
@@ -1504,6 +1524,672 @@ if (!function_exists('getProductSectionHeading')) {
             font-size: 11px
         }
     }
+
+    /* ==========================================================
+   THEME 18 — 3D SHAPE PRODUCT CAROUSEL REDESIGN
+   Retains existing cart AJAX, quick view and wishlist handlers.
+   ========================================================== */
+    .t18-card {
+        background: #fff !important;
+        border-radius: 13px !important;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--t18-primary) 15%, #e5e7eb);
+        transform: none !important;
+        padding-bottom: 52px;
+        height: 100%;
+        box-shadow: none !important;
+    }
+
+    .t18-card::after {
+        display: none !important
+    }
+
+    .t18-media {
+        aspect-ratio: 1/1 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .t18-card:hover .t18-media {
+        box-shadow: none !important
+    }
+
+    .t18-img {
+        object-fit: contain !important;
+        padding: 10px;
+    }
+
+    .t18-card:hover .t18-img {
+        transform: scale(1.035)
+    }
+
+    .t18-info {
+        padding: 12px 13px 5px !important;
+        gap: 7px !important;
+    }
+
+    .t18-title {
+        font-size: 14px !important;
+        line-height: 1.35 !important;
+        display: block !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .t18-rating {
+        display: none !important
+    }
+
+    .t18-price {
+        font-size: 14px !important
+    }
+
+    .t18-badge {
+        top: 10px;
+        left: 10px;
+        padding: 5px 8px;
+        font-size: 9px
+    }
+
+    .t18-actions {
+        position: absolute !important;
+        left: 12px !important;
+        right: 12px !important;
+        bottom: 10px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        justify-content: center;
+        opacity: 1 !important;
+        transform: none !important;
+        gap: 0 !important;
+        pointer-events: none;
+    }
+
+    .t18-actions .openQuickView:not(.t18-cart-btn) {
+        display: none !important
+    }
+
+    .t18-actions .t18-cart-btn {
+        pointer-events: auto;
+        width: auto !important;
+        height: 34px !important;
+        min-width: 130px;
+        max-width: 100%;
+        padding: 0 16px !important;
+        border-radius: 100px !important;
+        display: inline-flex !important;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        background: color-mix(in srgb, var(--t18-primary) 65%, #30251c) !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .t18-actions .t18-cart-btn i {
+        font-size: 15px !important
+    }
+
+    .t18-actions .t18-cart-btn:hover:not(:disabled) {
+        background: var(--t18-hover) !important;
+        transform: translateY(-2px)
+    }
+
+    .t18-actions .t18-cart-btn.is-in-cart {
+        background: color-mix(in srgb, var(--t18-primary) 12%, #fff) !important;
+        color: var(--t18-primary) !important;
+        border: 1px solid var(--t18-primary) !important;
+    }
+
+    .t18-actions .t18-cart-btn.is-disabled {
+        background: #e5e7eb !important;
+        color: #6b7280 !important;
+    }
+
+    .t18-wish {
+        top: 9px !important;
+        right: 9px !important;
+        background: #fff !important;
+    }
+
+    .t18-card .t18-bubbles {
+        pointer-events: none
+    }
+
+    .t18-product-carousel-section {
+        max-width: 1450px;
+        margin: 35px auto;
+        padding: 0 16px;
+        position: relative;
+        --t18-primary: var(--t9-primary);
+        --t18-hover: var(--t9-hover);
+    }
+
+    .t18-carousel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px
+    }
+
+    .t18-carousel-title {
+        margin: 0;
+        font-size: clamp(21px, 2.6vw, 30px);
+        font-weight: 800;
+        color: #20202a
+    }
+
+    .t18-carousel-view {
+        font-size: 13px;
+        color: #4b5563;
+        text-decoration: none
+    }
+
+    .t18-carousel-shell {
+        position: relative;
+        border: 1px solid color-mix(in srgb, var(--t9-primary) 20%, #c7c7c7);
+        border-radius: 16px;
+        background: color-mix(in srgb, var(--t9-primary) 5%, #f6f6f6);
+        padding: 22px 32px;
+        isolation: isolate;
+        overflow: hidden
+    }
+
+    .t18-carousel-shape {
+        position: absolute;
+        pointer-events: none;
+        z-index: -1;
+        opacity: .55;
+        filter: blur(.5px);
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 25%, #fff 0%, color-mix(in srgb, var(--t9-primary) 35%, #fff) 45%, color-mix(in srgb, var(--t9-hover) 65%, #fff) 100%);
+        box-shadow: inset -9px -12px 20px color-mix(in srgb, var(--t9-primary) 15%, transparent), 0 12px 26px color-mix(in srgb, var(--t9-primary) 15%, transparent);
+        animation: t18ShapeDrift 8s ease-in-out infinite alternate;
+    }
+
+    .t18-carousel-shape.a {
+        width: 120px;
+        height: 120px;
+        top: -65px;
+        left: 24%
+    }
+
+    .t18-carousel-shape.b {
+        width: 160px;
+        height: 160px;
+        bottom: -95px;
+        right: 12%;
+        animation-delay: -4s
+    }
+
+    @keyframes t18ShapeDrift {
+        from {
+            transform: translate3d(0, 0, 0) rotate(-8deg)
+        }
+
+        to {
+            transform: translate3d(14px, -13px, 0) rotate(10deg)
+        }
+    }
+
+    .t18-carousel-track {
+        display: flex !important;
+        gap: 16px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+        padding: 2px 0 8px;
+    }
+
+    .t18-carousel-track::-webkit-scrollbar {
+        display: none
+    }
+
+    .t18-carousel-track>.t18-card {
+        flex: 0 0 calc((100% - 64px)/5) !important;
+        width: calc((100% - 64px)/5) !important;
+        scroll-snap-align: start
+    }
+
+    .t18-carousel-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #334155;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+    }
+
+    .t18-carousel-nav.prev {
+        left: 9px
+    }
+
+    .t18-carousel-nav.next {
+        right: 9px
+    }
+
+    .t18-carousel-nav:disabled {
+        opacity: .35;
+        cursor: default
+    }
+
+    @media(max-width:1100px) {
+        .t18-carousel-track>.t18-card {
+            flex-basis: calc((100% - 48px)/4) !important;
+            width: calc((100% - 48px)/4) !important
+        }
+    }
+
+    @media(max-width:800px) {
+        .t18-carousel-track>.t18-card {
+            flex-basis: calc((100% - 16px)/2.4) !important;
+            width: calc((100% - 16px)/2.4) !important
+        }
+    }
+
+    @media(max-width:540px) {
+        .t18-product-carousel-section {
+            padding: 0 12px
+        }
+
+        .t18-carousel-shell {
+            padding: 12px 10px
+        }
+
+        .t18-carousel-track {
+            gap: 10px
+        }
+
+        .t18-carousel-track>.t18-card {
+            flex-basis: calc((100% - 10px)/2.05) !important;
+            width: calc((100% - 10px)/2.05) !important
+        }
+
+        .t18-carousel-nav {
+            width: 30px;
+            height: 30px
+        }
+
+        .t18-carousel-nav.prev {
+            left: 3px
+        }
+
+        .t18-carousel-nav.next {
+            right: 3px
+        }
+
+        .t18-title {
+            font-size: 11px !important
+        }
+
+        .t18-info {
+            padding: 9px !important
+        }
+
+        .t18-price {
+            font-size: 12px !important
+        }
+
+        .t18-actions .t18-cart-btn {
+            min-width: 0;
+            font-size: 10px;
+            padding: 0 9px !important;
+            height: 30px !important
+        }
+
+        .t18-card {
+            padding-bottom: 47px
+        }
+
+        .t18-wish {
+            width: 30px !important;
+            height: 30px !important
+        }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+        .t18-carousel-shape {
+            animation: none
+        }
+
+        .t18-carousel-track {
+            scroll-behavior: auto
+        }
+    }
+
+
+    /* ============================================================
+   THEME 18 — FINAL PRODUCT CARD: CART BUTTON BELOW PRICE
+   ============================================================ */
+    .t18-card {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100%;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
+        border: 1px solid rgba(15, 23, 42, .08) !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+    }
+
+    .t18-card::after {
+        display: none !important;
+    }
+
+    .t18-media {
+        position: relative !important;
+        flex: 0 0 auto;
+        width: calc(100% - 14px);
+        margin: 7px 7px 0;
+        aspect-ratio: 1 / 1 !important;
+        overflow: hidden !important;
+        border-radius: 11px !important;
+        background: color-mix(in srgb, var(--t18-primary) 5%, #f8f8f8);
+        box-shadow: none !important;
+    }
+
+    .t18-media-link {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+
+    .t18-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover !important;
+        padding: 0 !important;
+    }
+
+    .t18-wish {
+        top: 9px !important;
+        right: 9px !important;
+        z-index: 5;
+        width: 35px !important;
+        height: 35px !important;
+        background: #fff !important;
+        color: #334155 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .12) !important;
+    }
+
+    .t18-actions {
+        position: static !important;
+        inset: auto !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 8px 0 0 !important;
+        padding: 0 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        pointer-events: auto !important;
+        transition: none !important;
+    }
+
+    .t18-actions>.openQuickView:not(.t18-cart-btn) {
+        display: none !important;
+    }
+
+    .t18-actions .t18-cart-btn {
+        position: static !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        height: 37px !important;
+        min-height: 37px !important;
+        padding: 0 16px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        border: 0 !important;
+        border-radius: 999px !important;
+        background: var(--t18-primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        white-space: nowrap;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        cursor: pointer;
+    }
+
+    .t18-actions .t18-view-cart-link {
+        pointer-events: auto;
+        width: auto !important;
+        min-width: 130px;
+        max-width: 100%;
+        min-height: 34px;
+        padding: 0 16px !important;
+        border-radius: 100px !important;
+        display: inline-flex !important;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        background: var(--t18-hover) !important;
+        color: #fff !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        line-height: 1 !important;
+        text-decoration: none !important;
+        white-space: nowrap;
+    }
+
+    .t18-actions .t18-view-cart-link:hover {
+        background: var(--t18-primary) !important;
+        color: #fff !important;
+        transform: translateY(-2px);
+    }
+
+    .t18-actions .t18-view-cart-link i {
+        font-size: 15px !important;
+        color: #fff !important;
+    }
+
+    .t18-actions .t18-cart-btn i {
+        display: inline-block !important;
+        color: #fff !important;
+        font-size: 15px !important;
+        line-height: 1;
+    }
+
+    .t18-actions .t18-cart-btn .t18-icon-tick {
+        display: none !important;
+    }
+
+    .t18-actions .t18-cart-btn.is-in-cart .t18-icon-plus {
+        display: none !important;
+    }
+
+    .t18-actions .t18-cart-btn.is-in-cart .t18-icon-tick {
+        display: inline-block !important;
+    }
+
+    .t18-actions .t18-cart-btn.is-in-cart {
+        background: var(--t18-hover) !important;
+        color: #fff !important;
+    }
+
+    .t18-actions .t18-cart-btn.is-disabled {
+        background: #777 !important;
+        color: #fff !important;
+        cursor: not-allowed;
+    }
+
+    .t18-add-label {
+        display: inline !important;
+        color: #fff !important;
+        font-size: 13px !important;
+    }
+
+    .t18-info {
+        display: flex !important;
+        flex: 1 1 auto;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 13px 14px 16px !important;
+        gap: 8px !important;
+        background: #fff !important;
+        min-width: 0;
+    }
+
+    .t18-card-cart-row {
+        margin-top: 8px !important;
+        padding-top: 11px !important;
+        border-top: 1px solid color-mix(in srgb, var(--t18-primary) 18%, #e5e7eb);
+    }
+
+    .t18-title {
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 1.35 !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .t18-rating {
+        display: none !important;
+    }
+
+    .t18-price-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-wrap: wrap;
+    }
+
+    .t18-price {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    .t18-mrp {
+        font-size: 12px !important;
+    }
+
+    .t18-badge {
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 4;
+    }
+
+    /* D-shaped, rounded horizontal scrollbar for the carousel. */
+    .t18-carousel-track {
+        scrollbar-width: thin !important;
+        scrollbar-color: var(--t9-primary) color-mix(in srgb, var(--t9-primary) 13%, #e5e7eb) !important;
+        padding: 2px 0 13px !important;
+        scroll-behavior: smooth;
+    }
+
+    .t18-carousel-track::-webkit-scrollbar {
+        display: block !important;
+        height: 8px !important;
+    }
+
+    .t18-carousel-track::-webkit-scrollbar-track {
+        background: color-mix(in srgb, var(--t9-primary) 13%, #e5e7eb) !important;
+        border-radius: 999px !important;
+        margin: 0 3px !important;
+    }
+
+    .t18-carousel-track::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, var(--t9-primary), var(--t9-hover)) !important;
+        border: 1px solid rgba(255, 255, 255, .8) !important;
+        border-radius: 999px !important;
+        min-width: 42px;
+    }
+
+    .t18-carousel-track::-webkit-scrollbar-thumb:hover {
+        background: var(--t9-hover) !important;
+    }
+
+    @media (max-width: 768px) {
+        .t18-info {
+            padding: 10px 10px 12px !important;
+            gap: 6px !important;
+        }
+
+        .t18-card-cart-row {
+            margin-top: 6px !important;
+            padding-top: 8px !important;
+        }
+
+        .t18-title {
+            font-size: 11px !important;
+        }
+
+        .t18-price {
+            font-size: 12px !important;
+        }
+
+        .t18-mrp {
+            font-size: 10px !important;
+        }
+
+        .t18-actions {
+            margin-top: 7px !important;
+        }
+
+        .t18-actions .t18-cart-btn {
+            height: 31px !important;
+            min-height: 31px !important;
+            padding: 0 9px !important;
+            gap: 5px !important;
+            font-size: 10px !important;
+        }
+
+        .t18-actions .t18-cart-btn i {
+            font-size: 12px !important;
+        }
+
+        .t18-add-label {
+            font-size: 10px !important;
+        }
+    }
+
+    @media (max-width: 540px) {
+        .t18-carousel-track {
+            padding-bottom: 12px !important;
+        }
+
+        .t18-carousel-track::-webkit-scrollbar {
+            height: 7px !important;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .t18-carousel-track {
+            scroll-behavior: auto !important;
+        }
+
+        .t18-carousel-shape {
+            animation: none !important;
+        }
+    }
 </style>
 
 <!-- ============================================================ -->
@@ -1843,14 +2529,24 @@ if (!function_exists('getProductSectionHeading')) {
             else if (v.stock > 0) elStock.innerHTML = '<span style="color:#16a34a">' + v.stock + ' in stock</span>';
             else elStock.innerHTML = '<span style="color:#ef4444">Out of Stock</span>';
             if (v.inCart) {
-                elAddBtn.disabled = true;
-                elAddBtn.textContent = 'ALREADY IN CART';
+                elAddBtn.disabled = false;
+                elAddBtn.textContent = 'VIEW CART';
                 elAddBtn.classList.add('is-in-cart');
+                elAddBtn.dataset.viewCart = '1';
             } else {
+                elAddBtn.dataset.viewCart = '0';
                 elAddBtn.classList.remove('is-in-cart');
                 elAddBtn.disabled = (v.stock <= 0 && !v.unlimited);
                 elAddBtn.textContent = elAddBtn.disabled ? 'SOLD OUT' : 'ADD TO CART';
             }
+        }
+
+        function setCardViewCart(card) {
+            if (!card) return;
+            const actions = card.querySelector('.t18-actions');
+            if (!actions) return;
+            actions.innerHTML = '<a href="' + STORE_URL + 'cart" class="t18-icon-btn t18-view-cart-link"><i class="bi bi-cart-check-fill"></i><span>View Cart</span></a>';
+            card.dataset.inCart = '1';
         }
 
         function markProductCardInCart(productId, selectedVariant) {
@@ -1875,14 +2571,9 @@ if (!function_exists('getProductSectionHeading')) {
                     }
                     card.dataset.variants = JSON.stringify(variants);
 
-                    const hasVariants = card.dataset.hasAdvanced === '1' || card.dataset.hasBasic === '1';
-                    const cartBtn = card.querySelector('.t18-cart-btn');
-                    if (cartBtn && !hasVariants) {
-                        cartBtn.classList.add('is-in-cart');
-                        cartBtn.disabled = true;
-                    } else if (cartBtn && hasVariants) {
-                        // for variant products, show tick if any variant is in cart
-                        cartBtn.classList.add('is-in-cart');
+                    const isMainSelection = !selectedVariant || selectedVariant.variantType === 'main';
+                    if (isMainSelection) {
+                        setCardViewCart(card);
                     }
                     if (state.product && String(state.product.id) === String(productId)) {
                         if (type === 'advanced')(state.variants.advanced || []).forEach(item => {
@@ -1989,7 +2680,12 @@ if (!function_exists('getProductSectionHeading')) {
         }
 
         elAddBtn.addEventListener('click', function() {
-            if (!state.selectedVariant || elAddBtn.disabled) return;
+            if (!state.selectedVariant) return;
+            if (state.selectedVariant.inCart || elAddBtn.dataset.viewCart === '1') {
+                window.location.href = STORE_URL + 'cart';
+                return;
+            }
+            if (elAddBtn.disabled) return;
             const orig = elAddBtn.textContent;
             elAddBtn.disabled = true;
             elAddBtn.textContent = 'ADDING...';
@@ -2039,8 +2735,6 @@ if (!function_exists('getProductSectionHeading')) {
             sendAddToCart(payload, res => {
                 if (res.success || (res.message && /already|duplicate|exist/i.test(res.message))) {
                     toast(res.message || 'Added to bag!', false);
-                    btn.classList.add('is-in-cart');
-                    btn.disabled = true;
                     markProductCardInCart(btn.dataset.id, {
                         variantType: 'main',
                         variantId: ''
@@ -2080,3 +2774,195 @@ if (!function_exists('getProductSectionHeading')) {
         trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     });
 </script>
+
+<?php
+/* ============================================================
+   THEME 18 — COMPLETE PRODUCT CAROUSEL COMPONENT
+   Include this file once, then call:
+   <?= getProductCarouselSection('Most loved 💗', $storeUrl . 'shop-all', 10) ?>
+   ============================================================ */
+if (!function_exists('getProductCarouselSection')) {
+    function getProductCarouselSection($heading = 'Most loved 💗', $viewAllUrl = '', $limit = 10)
+    {
+        global $storeUrl, $primary_color, $hover_color;
+        $primary = $primary_color ?? (getData("color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#ff007f');
+        $hover   = $hover_color ?? (getData("hover_color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#ec4899');
+        $viewUrl = $viewAllUrl ?: ($storeUrl . 'shop-all');
+        $limit   = max(1, min(30, (int)$limit));
+
+        $stmt = getProducts();
+        $products = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        if (empty($products)) return '';
+
+        ob_start(); ?>
+        <section class="t18-product-carousel-section"
+            style="--t9-primary:<?= htmlspecialchars($primary, ENT_QUOTES, 'UTF-8') ?>;--t9-hover:<?= htmlspecialchars($hover, ENT_QUOTES, 'UTF-8') ?>">
+            <div class="t18-carousel-head">
+                <h2 class="t18-carousel-title"><?= htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') ?></h2>
+                <a class="t18-carousel-view" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>">View All</a>
+            </div>
+            <div class="t18-carousel-shell">
+                <span class="t18-carousel-shape a" aria-hidden="true"></span>
+                <span class="t18-carousel-shape b" aria-hidden="true"></span>
+                <button type="button" class="t18-carousel-nav prev" aria-label="Previous products"><i class="bi bi-chevron-left"></i></button>
+                <div class="t18-carousel-track" tabindex="0" aria-label="Product carousel">
+                    <?php foreach (array_slice($products, 0, $limit) as $product): ?>
+                        <?= getProductHtml($product['id']) ?>
+                    <?php endforeach; ?>
+                </div>
+                <button type="button" class="t18-carousel-nav next" aria-label="Next products"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </section>
+        <script>
+            (function() {
+                document.querySelectorAll('.t18-product-carousel-section:not([data-carousel-ready])').forEach(function(section) {
+                    section.setAttribute('data-carousel-ready', '1');
+                    var track = section.querySelector('.t18-carousel-track');
+                    var prev = section.querySelector('.t18-carousel-nav.prev');
+                    var next = section.querySelector('.t18-carousel-nav.next');
+                    if (!track || !prev || !next) return;
+
+                    function update() {
+                        var max = Math.max(0, track.scrollWidth - track.clientWidth);
+                        prev.disabled = track.scrollLeft <= 2;
+                        next.disabled = track.scrollLeft >= max - 2;
+                    }
+
+                    function move(direction) {
+                        var firstCard = track.querySelector('.t18-card');
+                        if (!firstCard) return;
+                        var gap = parseFloat(getComputedStyle(track).gap) || 0;
+                        var step = (firstCard.getBoundingClientRect().width + gap) * 2;
+                        track.scrollBy({
+                            left: direction * step,
+                            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+                        });
+                    }
+                    prev.addEventListener('click', function() {
+                        move(-1);
+                    });
+                    next.addEventListener('click', function() {
+                        move(1);
+                    });
+                    track.addEventListener('scroll', update, {
+                        passive: true
+                    });
+                    window.addEventListener('resize', update);
+                    update();
+                });
+            })();
+        </script>
+<?php
+        return ob_get_clean();
+    }
+}
+?>
+
+
+<?php
+/* ============================================================
+   THEME 18 — PRODUCT CAROUSEL COMPONENT (RANDOM MINGLE)
+   - Heading: default "Popular Products"
+   - PHP shuffles products → different every request
+   - JS re-shuffles the DOM → different every page load
+   ============================================================ */
+if (!function_exists('getProductCarouselSection_random')) {
+    function getProductCarouselSection_random($heading = 'Popular Products', $viewAllUrl = '', $limit = 10)
+    {
+        global $storeUrl, $primary_color, $hover_color;
+        $primary = $primary_color ?? (getData("color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#ff007f');
+        $hover   = $hover_color ?? (getData("hover_color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#ec4899');
+        $viewUrl = $viewAllUrl ?: ($storeUrl . 'shop-all');
+        $limit   = max(1, min(30, (int)$limit));
+
+        // 1. Fetch all products
+        $stmt = getProducts();
+        $products = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        if (empty($products)) return '';
+
+        // 2. PHP shuffle → random on server
+        shuffle($products);
+
+        // 3. Take only what we need
+        $randomProducts = array_slice($products, 0, $limit);
+
+        ob_start(); ?>
+        <section class="t18-product-carousel-section"
+            style="--t9-primary:<?= htmlspecialchars($primary, ENT_QUOTES, 'UTF-8') ?>;--t9-hover:<?= htmlspecialchars($hover, ENT_QUOTES, 'UTF-8') ?>">
+            <div class="t18-carousel-head">
+                <h2 class="t18-carousel-title"><?= htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') ?></h2>
+                <a class="t18-carousel-view" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>">View All</a>
+            </div>
+            <div class="t18-carousel-shell">
+                <span class="t18-carousel-shape a" aria-hidden="true"></span>
+                <span class="t18-carousel-shape b" aria-hidden="true"></span>
+                <button type="button" class="t18-carousel-nav prev" aria-label="Previous products"><i class="bi bi-chevron-left"></i></button>
+
+                <div class="t18-carousel-track" tabindex="0" aria-label="Product carousel">
+                    <?php foreach ($randomProducts as $product): ?>
+                        <?= getProductHtml($product['id']) ?>
+                    <?php endforeach; ?>
+                </div>
+
+                <button type="button" class="t18-carousel-nav next" aria-label="Next products"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </section>
+
+        <script>
+            (function() {
+                document.querySelectorAll('.t18-product-carousel-section:not([data-carousel-ready])').forEach(function(section) {
+                    section.setAttribute('data-carousel-ready', '1');
+
+                    var track = section.querySelector('.t18-carousel-track');
+                    var prev = section.querySelector('.t18-carousel-nav.prev');
+                    var next = section.querySelector('.t18-carousel-nav.next');
+                    if (!track || !prev || !next) return;
+
+                    // === JS SHUFFLE ===
+                    // Grab all cards, shuffle them in memory, and re-append.
+                    var cards = Array.from(track.querySelectorAll('.t18-card'));
+                    for (let i = cards.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [cards[i], cards[j]] = [cards[j], cards[i]];
+                    }
+                    cards.forEach(card => track.appendChild(card));
+
+                    // === CAROUSEL NAVIGATION ===
+                    function update() {
+                        var max = Math.max(0, track.scrollWidth - track.clientWidth);
+                        prev.disabled = track.scrollLeft <= 2;
+                        next.disabled = track.scrollLeft >= max - 2;
+                    }
+
+                    function move(direction) {
+                        var firstCard = track.querySelector('.t18-card');
+                        if (!firstCard) return;
+                        var gap = parseFloat(getComputedStyle(track).gap) || 0;
+                        var step = (firstCard.getBoundingClientRect().width + gap) * 2;
+                        track.scrollBy({
+                            left: direction * step,
+                            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+                        });
+                    }
+
+                    prev.addEventListener('click', function() {
+                        move(-1);
+                    });
+                    next.addEventListener('click', function() {
+                        move(1);
+                    });
+                    track.addEventListener('scroll', update, {
+                        passive: true
+                    });
+                    window.addEventListener('resize', update);
+
+                    // Delay the initial button check slightly to let DOM settle
+                    setTimeout(update, 100);
+                });
+            })();
+        </script>
+<?php
+        return ob_get_clean();
+    }
+}
+?>

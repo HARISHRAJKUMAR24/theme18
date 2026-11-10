@@ -68,51 +68,24 @@
     <!-- ============================================================
          HTML — SECTION 4: BANNER (external include)
     ============================================================ -->
-    <?php include_once __DIR__ . "/includes/Banner.php"; ?>
+    <?php include_once __DIR__ . "/includes/banner.php"; ?>
 
+    <?php include_once __DIR__ . "/includes/advance-category.php"; ?>
 
-
-    <section class="product-section max-w-[1450px] mx-auto px-4 sm:px-6 py-10">
-        <div class="product-bg" aria-hidden="true">
-            <span class="orb orb-1"></span>
-            <span class="orb orb-2"></span>
-            <span class="orb orb-3"></span>
-            <span class="orb orb-4"></span>
-            <span class="glow-ring"></span>
-        </div>
-        <div class="relative z-10">
-            <?= getProductSectionHeading('Trending', 'Now.', $storeUrl . 'shop-all') ?>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                <?php
-                $stmt = getProducts();
-                $products = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-                $i = 0;
-                foreach ($products as $p) {
-                    if ($i++ >= 10) break;
-                    echo getProductHtml($p['id']);
-                }
-                ?>
-            </div>
-        </div>
-    </section>
+<?= getProductCarouselSection('Most loved 💗', $storeUrl . 'shop-all', 10) ?>
 
 
 
     <?php include_once __DIR__ . "/includes/offers.php" ?>
 
         <?php include_once __DIR__ . "/includes/why-shop-us.php" ?>
+        <?= getProductCarouselSection_random('Popular Products', $storeUrl . 'shop-all', 10) ?>
 
-
+    <!--Footer File Includes that file has all JS Files includes links-->
+    <?php include_once __DIR__ . "/includes/footer.php"; ?>
     <!-- ============================================================
          SCRIPTS
     ============================================================ -->
-
-    <!-- 1. Global Lucide init -->
-    <script>
-        lucide.createIcons();
-    </script>
-
-
 
 
 
