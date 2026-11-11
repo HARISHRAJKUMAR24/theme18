@@ -1,4 +1,5 @@
 <!-- ============================================================
+ theme 18: Nav Bar
      BACKEND — DB COLORS + COUNTS + CATEGORIES
 ============================================================ -->
 <?php
@@ -1192,11 +1193,18 @@ $ajaxBase    = ($appBasePath === '/') ? '/' : rtrim($appBasePath, '/') . '/';
             }
         });
         searchForm?.addEventListener('submit', e => {
+            e.preventDefault();
+
             const val = (searchInput?.value || '').trim();
+
             if (!val) {
-                e.preventDefault();
                 searchInput?.focus();
+                return;
             }
+
+            // Theme 18 search route: /search/{query}
+            // Keep the same working URL format as Theme 9.
+            window.location.href = '<?= rtrim($storeUrl, '/') ?>/search/' + encodeURIComponent(val);
         });
 
         /* ---------- Search suggestions (NEW) ---------- */

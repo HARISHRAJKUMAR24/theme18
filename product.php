@@ -13,7 +13,7 @@ function getRandomProducts($limit = 3)
 
 // Fetch DB Colors
 $primary_color = getData("color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#ed168b';
-$hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#dc007b';
+$hover_color   = getData("hover_color", "seller_settings", "(seller_id='$sellerId' AND store_id='$storeId')") ?? '#dc007b';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,32 +26,152 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             --t18-hover: <?= htmlspecialchars($hover_color) ?>;
         }
 
+        /* ---------- Page background: DB-coloured radial glows ---------- */
         body {
-            background: radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--t18-primary) 6%, #fcfcfc) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--t18-hover) 6%, #fcfcfc) 0%, transparent 40%),
+            background:
+                radial-gradient(circle at 8% 12%,
+                    color-mix(in srgb, var(--t18-primary) 8%, #fcfcfc) 0%,
+                    transparent 42%),
+                radial-gradient(circle at 92% 88%,
+                    color-mix(in srgb, var(--t18-hover) 8%, #fcfcfc) 0%,
+                    transparent 42%),
                 #fafafa;
+            min-height: 100vh;
         }
 
-        /* 3D Product Image Container */
+        /* Floating bubble accents (page-wide, low-key) */
+        .t18-page-bubbles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .t18-page-bubbles .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 25%,
+                    #ffffff 0%,
+                    color-mix(in srgb, var(--t18-primary) 45%, #ffffff) 55%,
+                    color-mix(in srgb, var(--t18-primary) 90%, #ffffff) 100%);
+            box-shadow:
+                0 20px 50px color-mix(in srgb, var(--t18-primary) 25%, transparent),
+                inset 0 -8px 16px rgba(0, 0, 0, .05),
+                inset 0 8px 16px rgba(255, 255, 255, .85);
+            opacity: .35;
+            animation: t18PageFloat 14s ease-in-out infinite alternate;
+            will-change: transform;
+        }
+
+        .t18-page-bubbles .bubble-1 {
+            width: 240px;
+            height: 240px;
+            top: -60px;
+            left: -70px;
+            animation-delay: -2s;
+        }
+
+        .t18-page-bubbles .bubble-2 {
+            width: 160px;
+            height: 160px;
+            top: 40%;
+            right: -50px;
+            animation-delay: -6s;
+            opacity: .25;
+        }
+
+        .t18-page-bubbles .bubble-3 {
+            width: 100px;
+            height: 100px;
+            bottom: 6%;
+            left: 8%;
+            animation-delay: -10s;
+            opacity: .2;
+        }
+
+        @keyframes t18PageFloat {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(14px, -18px) scale(1.05);
+            }
+
+            100% {
+                transform: translate(-8px, 12px) scale(.97);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .t18-page-bubbles .bubble-1 {
+                width: 140px;
+                height: 140px;
+            }
+
+            .t18-page-bubbles .bubble-2 {
+                width: 90px;
+                height: 90px;
+            }
+
+            .t18-page-bubbles .bubble-3 {
+                display: none;
+            }
+        }
+
+        /* ---------- 3D glass main panel ---------- */
+        .t18-main-glass {
+            position: relative;
+            z-index: 1;
+            background:
+                linear-gradient(145deg,
+                    rgba(255, 255, 255, .90) 0%,
+                    color-mix(in srgb, var(--t18-primary) 3%, rgba(255, 255, 255, .85)) 100%);
+            backdrop-filter: blur(18px);
+            border-radius: 32px;
+            border: 1px solid color-mix(in srgb, var(--t18-primary) 15%, rgba(255, 255, 255, .6));
+            box-shadow:
+                0 24px 60px -20px color-mix(in srgb, var(--t18-primary) 25%, transparent),
+                0 8px 22px -8px color-mix(in srgb, var(--t18-hover) 12%, transparent),
+                inset 0 1px 0 rgba(255, 255, 255, .9);
+        }
+
+        @media (max-width: 640px) {
+            .t18-main-glass {
+                border-radius: 22px;
+            }
+        }
+
+        /* ---------- 3D Product Image Container ---------- */
         .t18-product-media {
             position: relative;
-            background: linear-gradient(135deg, color-mix(in srgb, var(--t18-primary) 10%, #fff) 0%, color-mix(in srgb, var(--t18-hover) 12%, #fff) 100%);
+            background:
+                radial-gradient(circle at 30% 25%,
+                    color-mix(in srgb, #ffffff 80%, var(--t18-primary)) 0%,
+                    color-mix(in srgb, var(--t18-primary) 12%, #fff) 45%,
+                    color-mix(in srgb, var(--t18-hover) 18%, #fff) 100%);
             border-radius: 28px;
-            border: 1px solid color-mix(in srgb, var(--t18-primary) 18%, transparent);
-            box-shadow: 0 20px 50px -20px color-mix(in srgb, var(--t18-primary) 30%, transparent),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            border: 1px solid color-mix(in srgb, var(--t18-primary) 20%, transparent);
+            box-shadow:
+                0 20px 50px -20px color-mix(in srgb, var(--t18-primary) 35%, transparent),
+                0 10px 22px -10px color-mix(in srgb, var(--t18-hover) 18%, transparent),
+                inset 0 0 0 1px rgba(255, 255, 255, .6);
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
             transform-style: preserve-3d;
-            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            transition: transform .4s ease, box-shadow .4s ease;
         }
 
         .t18-product-media:hover {
             transform: translateY(-5px);
-            box-shadow: 0 30px 60px -20px color-mix(in srgb, var(--t18-primary) 40%, transparent);
+            box-shadow:
+                0 30px 60px -20px color-mix(in srgb, var(--t18-primary) 45%, transparent),
+                0 14px 28px -10px color-mix(in srgb, var(--t18-hover) 25%, transparent),
+                inset 0 0 0 1px rgba(255, 255, 255, .75);
         }
 
         #mainProductImage {
@@ -59,15 +179,15 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             max-height: 60vh;
             min-height: 250px;
             object-fit: contain;
-            filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.15));
-            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            filter: drop-shadow(0 15px 25px rgba(0, 0, 0, .15)) drop-shadow(0 6px 10px color-mix(in srgb, var(--t18-primary) 20%, transparent));
+            transition: transform .5s cubic-bezier(.22, 1, .36, 1);
         }
 
         .t18-product-media:hover #mainProductImage {
             transform: scale(1.05) rotate(1deg);
         }
 
-        /* 3D Thumbnails */
+        /* ---------- 3D Thumbnails ---------- */
         .t18-thumb {
             width: 70px;
             height: 70px;
@@ -76,18 +196,18 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             cursor: pointer;
             border: 2px solid transparent;
             background: #fff;
-            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all .3s cubic-bezier(.22, 1, .36, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
         }
 
         .t18-thumb:hover,
         .t18-thumb.active {
             border-color: var(--t18-primary);
             transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 20px color-mix(in srgb, var(--t18-primary) 25%, transparent);
+            box-shadow: 0 8px 20px color-mix(in srgb, var(--t18-primary) 30%, transparent);
         }
 
-        /* Variant Buttons */
+        /* ---------- Variant Buttons ---------- */
         .variant-btn {
             padding: 10px 16px;
             border-radius: 12px;
@@ -95,13 +215,13 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             background: #fff;
             font-weight: 600;
             font-size: 13px;
-            transition: all 0.2s ease;
+            transition: all .2s ease;
         }
 
         .variant-btn:hover {
             border-color: var(--t18-primary);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--t18-primary) 15%, transparent);
         }
 
         .variant-btn.ring-2 {
@@ -110,20 +230,20 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             color: var(--t18-primary);
         }
 
-        /* Color / Size Buttons */
+        /* ---------- Colour / Size Buttons ---------- */
         .color-btn {
             width: 42px;
             height: 42px;
             border-radius: 50%;
             border: 2px solid #e2e8f0;
-            transition: all 0.2s ease;
+            transition: all .2s ease;
         }
 
         .color-btn:hover,
         .color-btn.active-color {
             transform: scale(1.1);
             border-color: var(--t18-primary);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--t18-primary) 20%, transparent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--t18-primary) 25%, transparent);
         }
 
         .size-btn {
@@ -133,7 +253,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             background: #fff;
             font-weight: 600;
             font-size: 13px;
-            transition: all 0.2s ease;
+            transition: all .2s ease;
         }
 
         .size-btn:hover:not(:disabled) {
@@ -144,10 +264,10 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             background: var(--t18-primary);
             color: #fff;
             border-color: var(--t18-primary);
-            box-shadow: 0 4px 15px color-mix(in srgb, var(--t18-primary) 40%, transparent);
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--t18-primary) 45%, transparent);
         }
 
-        /* Add to Cart Button */
+        /* ---------- Add to Cart Button ---------- */
         .t18-add-btn {
             background: var(--t18-primary);
             color: #fff;
@@ -155,14 +275,18 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             padding: 14px 32px;
             font-weight: 700;
             font-size: 15px;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 20px -8px var(--t18-primary);
+            transition: all .3s ease;
+            box-shadow:
+                0 10px 24px -8px color-mix(in srgb, var(--t18-primary) 60%, transparent),
+                inset 0 1px 0 rgba(255, 255, 255, .3);
         }
 
         .t18-add-btn:hover:not(:disabled) {
             background: var(--t18-hover);
             transform: translateY(-3px);
-            box-shadow: 0 12px 25px -8px var(--t18-hover);
+            box-shadow:
+                0 14px 30px -8px color-mix(in srgb, var(--t18-hover) 65%, transparent),
+                inset 0 1px 0 rgba(255, 255, 255, .4);
         }
 
         .t18-add-btn:disabled {
@@ -171,19 +295,61 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
             cursor: not-allowed;
         }
 
-        /* Combo Builder */
+        /* ---------- View Cart ---------- */
+        .t18-view-btn {
+            border: 2px solid color-mix(in srgb, var(--t18-primary) 25%, #e5e7eb);
+            color: #1f2937;
+            background: #fff;
+        }
+
+        .t18-view-btn:hover {
+            border-color: var(--t18-primary);
+            color: var(--t18-primary);
+            box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--t18-primary) 40%, transparent);
+        }
+
+        /* ---------- Combo Builder ---------- */
         .combo-slot {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: color-mix(in srgb, var(--t18-primary) 3%, #f8fafc);
+            border: 1px solid color-mix(in srgb, var(--t18-primary) 10%, #e2e8f0);
             border-radius: 14px;
-            transition: all 0.3s ease;
+            transition: all .3s ease;
         }
 
         .combo-slot:hover {
-            border-color: color-mix(in srgb, var(--t18-primary) 30%, transparent);
+            border-color: color-mix(in srgb, var(--t18-primary) 35%, transparent);
+            box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--t18-primary) 25%, transparent);
         }
 
-        /* Toast Animation */
+        /* ---------- Description & Related panels ---------- */
+        .t18-panel {
+            border-radius: 24px;
+            border: 1px solid color-mix(in srgb, var(--t18-primary) 10%, #e5e7eb);
+            background:
+                linear-gradient(145deg, #ffffff 0%, color-mix(in srgb, var(--t18-primary) 2%, #ffffff) 100%);
+            box-shadow: 0 12px 40px -20px color-mix(in srgb, var(--t18-primary) 20%, transparent);
+        }
+
+        /* ---------- Also Bought Card ---------- */
+        .t18-also-card {
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid color-mix(in srgb, var(--t18-primary) 10%, #e5e7eb);
+            box-shadow: 0 8px 20px -14px color-mix(in srgb, var(--t18-primary) 20%, transparent);
+            transition: all .3s ease;
+        }
+
+        .t18-also-card:hover {
+            border-color: color-mix(in srgb, var(--t18-primary) 30%, transparent);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -14px color-mix(in srgb, var(--t18-primary) 35%, transparent);
+        }
+
+        .t18-also-media {
+            background: color-mix(in srgb, var(--t18-primary) 6%, #f8fafc);
+        }
+
+        /* ---------- Toast animations (unchanged) ---------- */
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
@@ -209,13 +375,14 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
         }
 
         .toast-slide-in {
-            animation: slideInRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation: slideInRight .5s cubic-bezier(.22, 1, .36, 1) forwards;
         }
 
         .toast-slide-out {
-            animation: slideOutRight 0.5s ease-in forwards;
+            animation: slideOutRight .5s ease-in forwards;
         }
 
+        /* ---------- Responsive tweaks ---------- */
         @media (max-width: 768px) {
             #mainProductImage {
                 max-height: 40vh;
@@ -225,11 +392,40 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 padding: 10px;
                 border-radius: 20px;
             }
+
+            .t18-main-glass {
+                border-radius: 22px;
+            }
+        }
+
+        /* ---------- Reduced motion ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            .t18-page-bubbles .bubble {
+                animation: none !important;
+            }
+
+            #mainProductImage,
+            .t18-product-media,
+            .t18-thumb,
+            .variant-btn,
+            .color-btn,
+            .size-btn,
+            .t18-add-btn,
+            .t18-also-card {
+                transition: none !important;
+            }
         }
     </style>
 </head>
 
-<body class="font-sans min-h-screen">
+<body class="font-sans min-h-screen relative">
+
+    <!-- Page background bubbles -->
+    <div class="t18-page-bubbles" aria-hidden="true">
+        <span class="bubble bubble-1"></span>
+        <span class="bubble bubble-2"></span>
+        <span class="bubble bubble-3"></span>
+    </div>
 
     <?php include_once __DIR__ . "/includes/minimum-order.php"; ?>
 
@@ -353,16 +549,15 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
     ?>
 
     <!-- Main Product Section -->
-    <section class="py-10 sm:py-16">
+    <section class="py-10 sm:py-16 relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <!-- 3D Glass Card -->
-            <div class="bg-white/80 backdrop-blur-xl rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white/60 p-5 sm:p-8 lg:p-10">
+            <div class="t18-main-glass p-5 sm:p-8 lg:p-10">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
 
                     <!-- LEFT: IMAGES -->
                     <div class="flex flex-col-reverse lg:flex-row gap-4 justify-center items-start">
-                        <!-- Thumbnails -->
                         <div id="thumbnailContainer" class="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-hide">
                             <img src="<?= UPLOADS_URL . $image ?>" class="t18-thumb active" onclick="document.getElementById('mainProductImage').src=this.src; document.querySelectorAll('.t18-thumb').forEach(t=>t.classList.remove('active')); this.classList.add('active');">
                             <?php foreach ($additionalImages as $img): ?>
@@ -370,7 +565,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             <?php endforeach; ?>
                         </div>
 
-                        <!-- Main Image Wrapper -->
                         <div class="t18-product-media w-full">
                             <img id="mainProductImage" src="<?= UPLOADS_URL . $image ?>" alt="<?= htmlspecialchars($name) ?>">
                         </div>
@@ -379,7 +573,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                     <!-- RIGHT: INFO -->
                     <div class="space-y-6">
 
-                        <!-- Title & Rating -->
                         <div>
                             <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-2">
                                 <?= htmlspecialchars($name) ?>
@@ -389,7 +582,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             </p>
                         </div>
 
-                        <!-- Rating -->
                         <div class="flex items-center gap-2">
                             <?php
                             $ratingData = readData("AVG(rating) as avg_rating, COUNT(*) as total_ratings", "product_ratings", "product_id='$id'");
@@ -407,7 +599,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             </span>
                         </div>
 
-                        <!-- Price -->
                         <div class="flex items-end gap-3">
                             <span class="text-3xl font-black productPrice" style="color: var(--t18-primary);">
                                 <?= currencyToSymbol($storeCurrency) . number_format($price, 2) ?>
@@ -419,7 +610,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             <?php endif; ?>
                         </div>
 
-                        <!-- Stock Display -->
                         <div class="flex items-center gap-3">
                             <p id="stockDisplay" class="text-sm font-bold px-3 py-1.5 rounded-full <?= ($total_stocks <= 5 && $unlimited_stock != 1) ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600' ?>">
                                 <?= $mainStockDisplay ?>
@@ -429,7 +619,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             </p>
                         </div>
 
-                        <!-- Variant Selections -->
+                        <!-- Variant Selections ... same as before ... -->
                         <?php if ($comboEnabled): ?>
                             <div id="comboProductBuilder" class="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 mt-4">
                                 <div class="flex items-center justify-between mb-3">
@@ -535,9 +725,11 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                                                     data-stock="<?= $sizeData['unlimited_stock'] ? 'Unlimited' : $sizeData['stock'] . ' ' . ($sizeData['unit_type'] ?? $unit_type) ?>"
                                                     data-image="<?= UPLOADS_URL . ($sizeData['image'] ?? $image) ?>"
                                                     data-in-cart="<?= $isInCart ? 1 : 0 ?>"
-                                                    <?= $isOutOfStock ? 'disabled' : '' ?>>
+                                                    data-out-of-stock="<?= $isOutOfStock ? 1 : 0 ?>">
                                                     <?= htmlspecialchars($sizeData['size']) ?>
-                                                    <?= $isInCart ? ' ✓' : '' ?>
+                                                    <?php if ($isOutOfStock): ?>
+                                                        <span class="text-xs ml-1 text-red-500">(Sold Out)</span>
+                                                    <?php endif; ?>
                                                 </button>
                                             <?php $firstSize = false;
                                             endforeach; ?>
@@ -580,29 +772,40 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                                 </div>
                             </div>
                         <?php endif; ?>
-
                         <!-- Add to Cart / View Cart -->
                         <div class="flex flex-wrap items-center gap-4 mt-6 pt-6 border-t border-gray-100">
                             <?php
                             $isOutOfStock = ($total_stocks <= 0 && $unlimited_stock != 1);
-                            $disableAdd = $inCartInitial || $isOutOfStock;
+                            // If initially in cart, hide Add button and show View Cart
+                            $showAddBtn = !$inCartInitial && !$isOutOfStock;
+                            $showViewBtn = $inCartInitial;
                             ?>
-                            <button id="addToCartBtn" class="t18-add-btn flex items-center justify-center gap-2 <?= $inCartInitial ? 'hidden' : '' ?>"
+
+                            <button id="addToCartBtn"
+                                class="t18-add-btn flex items-center justify-center gap-2 <?= !$showAddBtn ? 'hidden' : '' ?>"
                                 data-id="<?= $id ?>"
                                 data-variant="<?= $initialVariantId ?? '' ?>"
-                                <?= $disableAdd ? 'disabled' : '' ?>>
-                                <i class="bi bi-cart-plus-fill text-lg"></i> <?= $inCartInitial ? 'Already in Cart' : ($isOutOfStock ? 'Sold Out' : 'Add to Cart') ?>
+                                <?= !$showAddBtn ? 'disabled' : '' ?>>
+                                <i class="bi bi-cart-plus-fill text-lg"></i>
+                                <?= $isOutOfStock ? 'Sold Out' : 'Add to Cart' ?>
                             </button>
 
-                            <a id="viewCartBtn" href="<?= $storeUrl ?>cart" class="flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-[15px] transition bg-white border-2 border-gray-200 text-gray-800 hover:border-[var(--t18-primary)] hover:text-[var(--t18-primary)] <?= $inCartInitial ? '' : 'hidden' ?>">
+                            <button id="soldOutBtn"
+                                class="t18-add-btn flex items-center justify-center gap-2 bg-gray-300 cursor-not-allowed <?= ($isOutOfStock && !$inCartInitial) ? '' : 'hidden' ?>"
+                                disabled>
+                                <i class="bi bi-x-circle text-lg"></i> Sold Out
+                            </button>
+
+                            <a id="viewCartBtn" href="<?= $storeUrl ?>cart"
+                                class="t18-view-btn flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-[15px] transition <?= !$showViewBtn ? 'hidden' : '' ?>">
                                 <i class="bi bi-bag-check-fill"></i> View Cart
                             </a>
 
-                            <!-- Wishlist -->
                             <?php if (isLoggedIn()):
                                 $inWishlist = getData("id", "customer_wishlists", "customer_id='$customerId' AND product_id='$id' AND other=''") ? true : false;
                             ?>
-                                <button id="wishlistBtn" data-id="<?= $id ?>" data-variant="" class="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 shadow-sm transition hover:scale-105 handleWishlist <?= $inWishlist ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white text-gray-400 hover:text-rose-500' ?>">
+                                <button id="wishlistBtn" data-id="<?= $id ?>" data-variant=""
+                                    class="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 shadow-sm transition hover:scale-105 handleWishlist <?= $inWishlist ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white text-gray-400 hover:text-rose-500' ?>">
                                     <i class="bi bi-heart<?= $inWishlist ? '-fill' : '' ?> text-xl"></i>
                                 </button>
                             <?php else: ?>
@@ -611,18 +814,17 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                                 </a>
                             <?php endif; ?>
 
-                            <!-- Report -->
-                            <button type="button" id="reportThisProduct" class="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 shadow-sm bg-white text-gray-400 hover:text-red-500 transition hover:scale-105">
+                            <button type="button" id="reportThisProduct"
+                                class="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 shadow-sm bg-white text-gray-400 hover:text-red-500 transition hover:scale-105">
                                 <i class="bi bi-flag text-lg"></i>
                             </button>
                         </div>
-
                     </div>
                 </div>
 
                 <!-- Description -->
                 <?php if (!empty($description)): ?>
-                    <div class="mt-10 pt-8 border-t border-gray-100">
+                    <div class="t18-panel mt-10 p-6 sm:p-8">
                         <h3 class="text-lg font-bold text-gray-900 mb-4">Product Description</h3>
                         <div class="prose prose-sm sm:prose-base max-w-none text-gray-600 leading-relaxed">
                             <?= $description ?>
@@ -641,8 +843,8 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             <?php foreach ($randomProducts as $rp):
                                 $isRpoOut = (!$rp['total_stocks'] && !$rp['unlimited_stock']);
                             ?>
-                                <a href="<?= $storeUrl ?>product/<?= $rp['slug'] ?>" class="group bg-white rounded-2xl border border-gray-100 p-3 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                                    <div class="relative rounded-xl overflow-hidden mb-3 bg-gray-50 aspect-square">
+                                <a href="<?= $storeUrl ?>product/<?= $rp['slug'] ?>" class="t18-also-card group p-3">
+                                    <div class="relative rounded-xl overflow-hidden mb-3 t18-also-media aspect-square">
                                         <img src="<?= UPLOADS_URL . $rp['image'] ?>" alt="<?= htmlspecialchars($rp['name']) ?>" class="w-full h-full object-cover <?= $isRpoOut ? 'opacity-50 grayscale' : 'group-hover:scale-105 transition-transform duration-500' ?>">
                                         <?php if ($isRpoOut): ?>
                                             <div class="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-sm">
@@ -717,19 +919,19 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
         var productPrice = <?= $price ?>;
         var storeCurrencySymbol = <?= json_encode(currencyToSymbol($storeCurrency)) ?>;
 
-        // --- FIXED TOAST (z-index maxed out) ---
+        // --- FIXED TOAST ---
         function showCustomToast(message, type) {
             const existingToasts = document.querySelectorAll('.custom-product-toast');
             existingToasts.forEach(toast => toast.remove());
 
             const toast = document.createElement('div');
-            toast.className = 'custom-product-toast fixed top-6 right-6 z-[99999]'; // Higher z-index
+            toast.className = 'custom-product-toast fixed top-6 right-6 z-[99999]';
             toast.innerHTML = `
-                <div style="background-color: ${type === 'success' ? 'var(--t18-primary)' : 'var(--t18-danger)'} !important; color: white !important;" class="px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/20">
-                    <i class='bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'} text-xl'></i>
-                    <span class="font-bold text-sm">${message}</span>
-                </div>
-            `;
+            <div style="background-color: ${type === 'success' ? 'var(--t18-primary)' : '#ef4444'} !important; color: white !important;" class="px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/20">
+                <i class='bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'} text-xl'></i>
+                <span class="font-bold text-sm">${message}</span>
+            </div>
+        `;
             document.body.appendChild(toast);
             const toastContent = toast.querySelector('div');
             toastContent.classList.add('toast-slide-in');
@@ -743,70 +945,85 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // --- GLOBAL BUTTONS ---
+            const addBtn = document.getElementById('addToCartBtn');
+            const viewBtn = document.getElementById('viewCartBtn');
+            const soldOutBtn = document.getElementById('soldOutBtn');
+
             // --- REPORT MODAL LOGIC ---
             const reportModal = document.getElementById('reportProductContent');
             const reportForm = document.getElementById('reportForm');
+            const reportBtn = document.getElementById('reportThisProduct');
+            const closeReportBtn = document.getElementById('closeReportProductContent');
 
-            // Open Modal
-            document.getElementById('reportThisProduct').addEventListener('click', function() {
-                reportModal.classList.remove('opacity-0', 'invisible');
-                reportModal.classList.add('opacity-100', 'visible');
-                reportModal.querySelector('.bg-white').classList.remove('scale-95');
-                reportModal.querySelector('.bg-white').classList.add('scale-100');
-            });
-
-            // Close Modal
-            function closeReportModal() {
-                reportModal.classList.add('opacity-0', 'invisible');
-                reportModal.classList.remove('opacity-100', 'visible');
-                reportModal.querySelector('.bg-white').classList.remove('scale-100');
-                reportModal.querySelector('.bg-white').classList.add('scale-95');
-            }
-
-            document.getElementById('closeReportProductContent').addEventListener('click', closeReportModal);
-
-            // Close on Backdrop Click
-            reportModal.addEventListener('click', function(e) {
-                if (e.target === this) closeReportModal();
-            });
-
-            // Submit Report
-            $("#reportForm").on("submit", function(e) {
-                e.preventDefault();
-                const formData = new FormData(this);
-                const submitBtn = $(this).find('button[type="submit"]');
-                const origText = submitBtn.text();
-
-                submitBtn.prop('disabled', true).text('Sending...');
-
-                $.ajax({
-                    url: "shop/ajax/report-product.php",
-                    type: "POST",
-                    contentType: false,
-                    processData: false,
-                    data: formData,
-                    success: function(result) {
-                        submitBtn.prop('disabled', false).text(origText);
-                        try {
-                            const response = JSON.parse(result);
-                            if (response.success) {
-                                closeReportModal();
-                                $("#reportForm")[0].reset();
-                                showCustomToast("Report sent successfully!", 'success');
-                            } else {
-                                showCustomToast(response.message || "Failed to send report", 'error');
-                            }
-                        } catch (err) {
-                            console.error("Invalid JSON:", result);
-                            showCustomToast("Server error. Please try again.", 'error');
-                        }
-                    },
-                    error: function() {
-                        submitBtn.prop('disabled', false).text(origText);
-                        showCustomToast('Network error occurred', 'error');
+            if (reportBtn && reportModal) {
+                reportBtn.addEventListener('click', function() {
+                    reportModal.classList.remove('opacity-0', 'invisible');
+                    reportModal.classList.add('opacity-100', 'visible');
+                    const modalContent = reportModal.querySelector('.bg-white');
+                    if (modalContent) {
+                        modalContent.classList.remove('scale-95');
+                        modalContent.classList.add('scale-100');
                     }
                 });
-            });
+            }
+
+            function closeReportModal() {
+                if (!reportModal) return;
+                reportModal.classList.add('opacity-0', 'invisible');
+                reportModal.classList.remove('opacity-100', 'visible');
+                const modalContent = reportModal.querySelector('.bg-white');
+                if (modalContent) {
+                    modalContent.classList.remove('scale-100');
+                    modalContent.classList.add('scale-95');
+                }
+            }
+
+            if (closeReportBtn) closeReportBtn.addEventListener('click', closeReportModal);
+            if (reportModal) {
+                reportModal.addEventListener('click', function(e) {
+                    if (e.target === this) closeReportModal();
+                });
+            }
+
+            if (reportForm) {
+                $("#reportForm").on("submit", function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    const submitBtn = $(this).find('button[type="submit"]');
+                    const origText = submitBtn.text();
+
+                    submitBtn.prop('disabled', true).text('Sending...');
+
+                    $.ajax({
+                        url: "shop/ajax/report-product.php",
+                        type: "POST",
+                        contentType: false,
+                        processData: false,
+                        data: formData,
+                        success: function(result) {
+                            submitBtn.prop('disabled', false).text(origText);
+                            try {
+                                const response = JSON.parse(result);
+                                if (response.success) {
+                                    closeReportModal();
+                                    $("#reportForm")[0].reset();
+                                    showCustomToast("Report sent successfully!", 'success');
+                                } else {
+                                    showCustomToast(response.message || "Failed to send report", 'error');
+                                }
+                            } catch (err) {
+                                console.error("Invalid JSON:", result);
+                                showCustomToast("Server error. Please try again.", 'error');
+                            }
+                        },
+                        error: function() {
+                            submitBtn.prop('disabled', false).text(origText);
+                            showCustomToast('Network error occurred', 'error');
+                        }
+                    });
+                });
+            }
 
 
             // --- VARIANTS & CART LOGIC ---
@@ -834,18 +1051,15 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
 
                 function updateCounter() {
                     const selectedCount = comboSelections.filter(Boolean).length;
-                    const comboAddBtn = document.getElementById('addToCartBtn');
-                    if (comboAddBtn) {
+                    if (addBtn) {
                         const comboComplete = selectedCount === comboSelectionRequired;
-                        comboAddBtn.disabled = !comboComplete;
+                        addBtn.disabled = !comboComplete;
                         if (comboComplete) {
-                            comboAddBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
-                            comboAddBtn.classList.add('bg-primary-500');
-                            comboAddBtn.textContent = 'Add to Cart';
+                            addBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+                            addBtn.classList.add('bg-primary-500');
                         } else {
-                            comboAddBtn.classList.remove('bg-primary-500');
-                            comboAddBtn.classList.add('bg-gray-300', 'cursor-not-allowed');
-                            comboAddBtn.textContent = 'Add to Cart';
+                            addBtn.classList.remove('bg-primary-500');
+                            addBtn.classList.add('bg-gray-300', 'cursor-not-allowed');
                         }
                     }
                     if (!comboCounter) return;
@@ -885,18 +1099,18 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                         inputContainer.classList.add('hidden');
                         selectedDisplay.classList.remove('hidden');
                         selectedDisplay.innerHTML = `
-                            <div class="flex items-center justify-between gap-2 w-full bg-white border border-green-200 rounded-lg px-3 py-2 shadow-sm">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <span class="flex items-center justify-center w-5 h-5 shrink-0 rounded-full bg-green-100 text-green-600 text-[10px]">
-                                        <i class="fas fa-check"></i>
-                                    </span>
-                                    <span class="text-xs sm:text-sm font-semibold text-gray-800 truncate">${data.label || ''}</span>
-                                </div>
-                                <button type="button" class="combo-remove-selection shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition" title="Remove selection">
-                                    <i class="fas fa-times text-xs"></i>
-                                </button>
+                        <div class="flex items-center justify-between gap-2 w-full bg-white border border-green-200 rounded-lg px-3 py-2 shadow-sm">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="flex items-center justify-center w-5 h-5 shrink-0 rounded-full bg-green-100 text-green-600 text-[10px]">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                                <span class="text-xs sm:text-sm font-semibold text-gray-800 truncate">${data.label || ''}</span>
                             </div>
-                        `;
+                            <button type="button" class="combo-remove-selection shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition" title="Remove selection">
+                                <i class="fas fa-times text-xs"></i>
+                            </button>
+                        </div>
+                    `;
                         const removeButton = selectedDisplay.querySelector('.combo-remove-selection');
                         if (removeButton) {
                             removeButton.addEventListener('click', function(e) {
@@ -935,9 +1149,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                     const sizeSelect = slot.querySelector('.combo-size-select');
                     const variantSelect = slot.querySelector('.combo-variant-select');
                     comboSelections[slotIndex] = null;
-                    if (colorSelect && !keepColor) {
-                        colorSelect.value = '';
-                    }
+                    if (colorSelect && !keepColor) colorSelect.value = '';
                     if (sizeSelect) {
                         sizeSelect.innerHTML = '<option value="">Select Size</option>';
                         sizeSelect.value = '';
@@ -945,9 +1157,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                         sizeSelect.classList.remove('bg-white', 'text-gray-800', 'cursor-pointer');
                         sizeSelect.classList.add('bg-gray-100', 'text-gray-400');
                     }
-                    if (variantSelect) {
-                        variantSelect.value = '';
-                    }
+                    if (variantSelect) variantSelect.value = '';
                     updateSlotStatus(slot, false);
                     updateCounter();
                 }
@@ -961,141 +1171,133 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 comboSlots.forEach((slot, slotIndex) => {
                     const colorSelect = slot.querySelector('.combo-color-select');
                     const sizeSelect = slot.querySelector('.combo-size-select');
-                    if (!colorSelect || !sizeSelect) return;
-
-                    colorSelect.addEventListener('change', function() {
-                        const colorId = this.value;
-                        comboSelections[slotIndex] = null;
-                        updateSlotStatus(slot, false);
-                        sizeSelect.innerHTML = '<option value="">Select Size</option>';
-                        sizeSelect.value = '';
-                        sizeSelect.disabled = true;
-                        if (!colorId) {
-                            sizeSelect.classList.remove('bg-white', 'text-gray-800', 'cursor-pointer');
-                            sizeSelect.classList.add('bg-gray-100', 'text-gray-400');
-                            updateCounter();
-                            return;
-                        }
-                        const colorData = comboVariantData[colorId];
-                        if (!colorData || !Array.isArray(colorData.sizes)) {
-                            updateCounter();
-                            return;
-                        }
-                        let availableCount = 0;
-                        colorData.sizes.forEach(sizeData => {
-                            const variantId = String(sizeData.id || '');
-                            const alreadySelected = getSelectedVariantIds(slotIndex).includes(variantId);
-                            if (alreadySelected) return;
-
-                            const stock = parseInt(sizeData.stock || 0, 10);
-                            const unlimited = parseInt(sizeData.unlimited_stock || 0, 10) === 1;
-                            const outOfStock = !unlimited && stock <= 0;
-                            const option = document.createElement('option');
-                            option.value = variantId;
-                            option.dataset.variantId = variantId;
-                            option.dataset.size = sizeData.size || '';
-                            option.dataset.price = sizeData.price || 0;
-                            option.dataset.mrp = sizeData.mrp_price || 0;
-                            option.dataset.stock = unlimited ? 'Unlimited' : String(stock);
-                            option.dataset.image = sizeData.image || '';
-                            option.textContent = sizeData.size + (outOfStock ? ' — Sold Out' : '');
-                            if (outOfStock) {
-                                option.disabled = true;
-                            } else {
-                                availableCount++;
+                    if (colorSelect && sizeSelect) {
+                        colorSelect.addEventListener('change', function() {
+                            const colorId = this.value;
+                            comboSelections[slotIndex] = null;
+                            updateSlotStatus(slot, false);
+                            sizeSelect.innerHTML = '<option value="">Select Size</option>';
+                            sizeSelect.value = '';
+                            sizeSelect.disabled = true;
+                            if (!colorId) {
+                                sizeSelect.classList.remove('bg-white', 'text-gray-800', 'cursor-pointer');
+                                sizeSelect.classList.add('bg-gray-100', 'text-gray-400');
+                                updateCounter();
+                                return;
                             }
-                            sizeSelect.appendChild(option);
+                            const colorData = comboVariantData[colorId];
+                            if (!colorData || !Array.isArray(colorData.sizes)) {
+                                updateCounter();
+                                return;
+                            }
+                            let availableCount = 0;
+                            colorData.sizes.forEach(sizeData => {
+                                const variantId = String(sizeData.id || '');
+                                const alreadySelected = getSelectedVariantIds(slotIndex).includes(variantId);
+                                if (alreadySelected) return;
+                                const stock = parseInt(sizeData.stock || 0, 10);
+                                const unlimited = parseInt(sizeData.unlimited_stock || 0, 10) === 1;
+                                const outOfStock = !unlimited && stock <= 0;
+                                const option = document.createElement('option');
+                                option.value = variantId;
+                                option.dataset.variantId = variantId;
+                                option.dataset.size = sizeData.size || '';
+                                option.dataset.price = sizeData.price || 0;
+                                option.dataset.mrp = sizeData.mrp_price || 0;
+                                option.dataset.stock = unlimited ? 'Unlimited' : String(stock);
+                                option.dataset.image = sizeData.image || '';
+                                option.textContent = sizeData.size + (outOfStock ? ' — Sold Out' : '');
+                                if (outOfStock) option.disabled = true;
+                                else availableCount++;
+                                sizeSelect.appendChild(option);
+                            });
+
+                            if (availableCount > 0) {
+                                sizeSelect.disabled = false;
+                                sizeSelect.classList.remove('bg-gray-100', 'text-gray-400');
+                                sizeSelect.classList.add('bg-white', 'text-gray-800', 'cursor-pointer');
+                            } else {
+                                sizeSelect.innerHTML = '<option value="">No sizes available</option>';
+                                sizeSelect.disabled = true;
+                            }
+                            updateCounter();
                         });
 
-                        if (availableCount > 0) {
-                            sizeSelect.disabled = false;
-                            sizeSelect.classList.remove('bg-gray-100', 'text-gray-400');
-                            sizeSelect.classList.add('bg-white', 'text-gray-800', 'cursor-pointer');
-                        } else {
-                            sizeSelect.innerHTML = '<option value="">No sizes available</option>';
-                            sizeSelect.disabled = true;
-                        }
-                        updateCounter();
-                    });
-
-                    sizeSelect.addEventListener('change', function() {
-                        const variantId = String(this.value || '');
-                        if (!variantId) {
-                            comboSelections[slotIndex] = null;
-                            updateSlotStatus(slot, false);
+                        sizeSelect.addEventListener('change', function() {
+                            const variantId = String(this.value || '');
+                            if (!variantId) {
+                                comboSelections[slotIndex] = null;
+                                updateSlotStatus(slot, false);
+                                updateCounter();
+                                return;
+                            }
+                            const selectedOption = this.options[this.selectedIndex];
+                            if (!selectedOption) return;
+                            const colorOption = colorSelect.options[colorSelect.selectedIndex];
+                            const colorName = colorOption?.dataset.colorName || colorOption?.textContent.trim() || '';
+                            const size = selectedOption.dataset.size || '';
+                            const data = {
+                                variantId,
+                                colorId: colorSelect.value,
+                                colorName,
+                                size,
+                                price: parseFloat(selectedOption.dataset.price || 0),
+                                mrp: parseFloat(selectedOption.dataset.mrp || 0),
+                                stock: selectedOption.dataset.stock || '',
+                                image: selectedOption.dataset.image || '',
+                                label: `${colorName} • ${size}`
+                            };
+                            comboSelections[slotIndex] = data;
+                            showSelectedVariant(slot, data);
+                            updateSlotStatus(slot, true);
+                            showNextComboSlot(slotIndex);
                             updateCounter();
-                            return;
-                        }
-                        const selectedOption = this.options[this.selectedIndex];
-                        if (!selectedOption) return;
+                        });
+                    }
 
-                        const colorOption = colorSelect.options[colorSelect.selectedIndex];
-                        const colorName = colorOption?.dataset.colorName || colorOption?.textContent.trim() || '';
-                        const size = selectedOption.dataset.size || '';
-                        const data = {
-                            variantId,
-                            colorId: colorSelect.value,
-                            colorName,
-                            size,
-                            price: parseFloat(selectedOption.dataset.price || 0),
-                            mrp: parseFloat(selectedOption.dataset.mrp || 0),
-                            stock: selectedOption.dataset.stock || '',
-                            image: selectedOption.dataset.image || '',
-                            label: `${colorName} • ${size}`
-                        };
-                        comboSelections[slotIndex] = data;
-                        showSelectedVariant(slot, data);
-                        updateSlotStatus(slot, true);
-                        showNextComboSlot(slotIndex);
-                        updateCounter();
-                    });
-                });
-
-                comboSlots.forEach((slot, slotIndex) => {
                     const variantSelect = slot.querySelector('.combo-variant-select');
-                    if (!variantSelect) return;
-                    variantSelect.addEventListener('change', function() {
-                        const variantId = String(this.value || '');
-                        if (!variantId) {
-                            comboSelections[slotIndex] = null;
-                            showSelectedVariant(slot, null);
-                            updateSlotStatus(slot, false);
+                    if (variantSelect) {
+                        variantSelect.addEventListener('change', function() {
+                            const variantId = String(this.value || '');
+                            if (!variantId) {
+                                comboSelections[slotIndex] = null;
+                                showSelectedVariant(slot, null);
+                                updateSlotStatus(slot, false);
+                                updateCounter();
+                                return;
+                            }
+                            const duplicateIds = getSelectedVariantIds(slotIndex);
+                            if (duplicateIds.includes(variantId)) {
+                                showCustomToast('This variant is already selected in another slot.', 'error');
+                                this.value = '';
+                                comboSelections[slotIndex] = null;
+                                showSelectedVariant(slot, null);
+                                updateSlotStatus(slot, false);
+                                updateCounter();
+                                return;
+                            }
+                            const option = this.options[this.selectedIndex];
+                            const data = {
+                                variantId,
+                                price: parseFloat(option.dataset.price || 0),
+                                mrp: parseFloat(option.dataset.mrp || 0),
+                                stock: option.dataset.stock || '',
+                                image: option.dataset.image || '',
+                                label: option.dataset.variantName || option.textContent.trim()
+                            };
+                            comboSelections[slotIndex] = data;
+                            showSelectedVariant(slot, data);
+                            updateSlotStatus(slot, true);
+                            showNextComboSlot(slotIndex);
                             updateCounter();
-                            return;
-                        }
-                        const duplicateIds = getSelectedVariantIds(slotIndex);
-                        if (duplicateIds.includes(variantId)) {
-                            showCustomToast('This variant is already selected in another slot.', 'error');
-                            this.value = '';
-                            comboSelections[slotIndex] = null;
-                            showSelectedVariant(slot, null);
-                            updateSlotStatus(slot, false);
-                            updateCounter();
-                            return;
-                        }
-                        const option = this.options[this.selectedIndex];
-                        const data = {
-                            variantId,
-                            price: parseFloat(option.dataset.price || 0),
-                            mrp: parseFloat(option.dataset.mrp || 0),
-                            stock: option.dataset.stock || '',
-                            image: option.dataset.image || '',
-                            label: option.dataset.variantName || option.textContent.trim()
-                        };
-                        comboSelections[slotIndex] = data;
-                        showSelectedVariant(slot, data);
-                        updateSlotStatus(slot, true);
-                        showNextComboSlot(slotIndex);
-                        updateCounter();
-                    });
+                        });
+                    }
                 });
 
                 updateCounter();
 
-                const comboAddBtn = document.getElementById('addToCartBtn');
-                const comboViewBtn = document.getElementById('viewCartBtn');
-                if (comboAddBtn) {
-                    comboAddBtn.addEventListener('click', function() {
+                if (addBtn) {
+                    addBtn.addEventListener('click', function() {
                         if (this.disabled) return;
                         const selectedComboVariants = comboSelections.filter(Boolean);
                         if (selectedComboVariants.length !== comboSelectionRequired) {
@@ -1124,13 +1326,13 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                                 combo_variants: JSON.stringify(comboData)
                             },
                             success: function(result) {
-                                comboAddBtn.innerHTML = originalText;
-                                comboAddBtn.disabled = false;
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = false;
                                 try {
                                     const response = typeof result === 'string' ? JSON.parse(result) : result;
                                     if (response && response.success) {
-                                        comboAddBtn.classList.add('hidden');
-                                        if (comboViewBtn) comboViewBtn.classList.remove('hidden');
+                                        addBtn.classList.add('hidden');
+                                        if (viewBtn) viewBtn.classList.remove('hidden');
                                         showCustomToast(response.message || 'Combo added to cart successfully!', 'success');
                                         if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
                                         if (typeof getCartData === 'function') getCartData();
@@ -1144,8 +1346,8 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                             },
                             error: function(xhr, status, error) {
                                 console.error('Combo AJAX Error:', error, xhr.responseText);
-                                comboAddBtn.innerHTML = originalText;
-                                comboAddBtn.disabled = false;
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = false;
                                 showCustomToast('Network error occurred.', 'error');
                             }
                         });
@@ -1153,6 +1355,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 }
 
             } else if (isAdvanced) {
+                // [ADVANCED VARIANTS]
                 const colorButtons = document.querySelectorAll('.color-btn');
                 const sizeGroups = document.querySelectorAll('.size-group');
                 const sizeButtons = document.querySelectorAll('.size-btn');
@@ -1160,8 +1363,6 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 const priceEl = document.querySelector('.productPrice');
                 const mrpEl = document.querySelector('.productMrp');
                 const stockEl = document.getElementById('stockDisplay');
-                const addBtn = document.getElementById('addToCartBtn');
-                const viewBtn = document.getElementById('viewCartBtn');
                 const variantNameEl = document.getElementById('variantName');
 
                 let selectedVariantId = null;
@@ -1180,8 +1381,22 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                         selectedVariantId = null;
                         selectedVariantData = null;
 
-                        const firstSize = document.querySelector(`.size-group[data-color-id="${colorId}"] .size-btn:not([disabled])`);
-                        if (firstSize) firstSize.click();
+                        const currentSizeGroup = document.querySelector(`.size-group[data-color-id="${colorId}"]`);
+                        const firstAvailableSize = currentSizeGroup?.querySelector('.size-btn:not([data-out-of-stock="1"])');
+                        const firstSize = firstAvailableSize || currentSizeGroup?.querySelector('.size-btn');
+                        if (firstSize) {
+                            firstSize.click();
+                        } else {
+                            // No variants exist for this colour: reset stock and CTA state.
+                            if (stockEl) {
+                                stockEl.textContent = 'Out of stock';
+                                stockEl.classList.remove('bg-green-50', 'text-green-600');
+                                stockEl.classList.add('bg-red-50', 'text-red-600');
+                            }
+                            addBtn?.classList.add('hidden');
+                            viewBtn?.classList.add('hidden');
+                            soldOutBtn?.classList.remove('hidden');
+                        }
                     });
                 });
 
@@ -1215,14 +1430,19 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                         if (mrpEl) mrpEl.textContent = (selectedVariantData.mrp && selectedVariantData.mrp > selectedVariantData.price) ? storeCurrencySymbol + selectedVariantData.mrp.toLocaleString() : '';
 
                         if (stockEl) {
-                            stockEl.textContent = selectedVariantData.stock;
-                            const stockNumber = parseInt(selectedVariantData.stock);
-                            if (selectedVariantData.stock.toLowerCase().includes('unlimited') || stockNumber > 0) {
-                                stockEl.classList.remove('bg-red-50', 'text-red-600');
-                                stockEl.classList.add('bg-green-50', 'text-green-600');
-                            } else {
+                            const stockText = String(selectedVariantData.stock || '0').trim();
+                            const stockNumber = stockText.toLowerCase().includes('unlimited') ?
+                                Infinity :
+                                (parseFloat(stockText.replace(/[^0-9.\-]/g, '')) || 0);
+                            const isOutOfStock = stockNumber <= 0;
+
+                            stockEl.textContent = isOutOfStock ? 'Out of stock' : stockText;
+                            if (isOutOfStock) {
                                 stockEl.classList.remove('bg-green-50', 'text-green-600');
                                 stockEl.classList.add('bg-red-50', 'text-red-600');
+                            } else {
+                                stockEl.classList.remove('bg-red-50', 'text-red-600');
+                                stockEl.classList.add('bg-green-50', 'text-green-600');
                             }
                         }
 
@@ -1235,106 +1455,103 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 });
 
                 function updateAddToCartButton(variantData) {
-                    if (!addBtn || !viewBtn) return;
-                    const stockText = variantData.stock;
-                    let stockNumber = parseInt(stockText);
-                    if (stockText.toLowerCase().includes('unlimited')) stockNumber = Infinity;
-                    const isOutOfStock = stockNumber < 1;
+                    if (!addBtn || !viewBtn || !soldOutBtn) return;
+
+                    const stockText = String(variantData.stock || '0').trim();
+                    const stockNumber = stockText.toLowerCase().includes('unlimited') ?
+                        Infinity :
+                        (parseFloat(stockText.replace(/[^0-9.\-]/g, '')) || 0);
+                    const isOutOfStock = stockNumber <= 0;
+
+                    // Always reset all three controls before showing the correct one.
+                    addBtn.classList.add('hidden');
+                    viewBtn.classList.add('hidden');
+                    soldOutBtn.classList.add('hidden');
+                    addBtn.disabled = false;
 
                     if (variantData.inCart) {
-                        addBtn.classList.add('hidden');
                         viewBtn.classList.remove('hidden');
-                        addBtn.disabled = true;
                     } else if (isOutOfStock) {
-                        addBtn.disabled = true;
-                        addBtn.textContent = 'Sold Out';
-                        addBtn.classList.remove('bg-[var(--t18-primary)]');
-                        addBtn.classList.add('bg-gray-300', 'cursor-not-allowed');
-                        viewBtn.classList.add('hidden');
-                        addBtn.classList.remove('hidden');
+                        soldOutBtn.classList.remove('hidden');
                     } else {
-                        addBtn.disabled = false;
-                        addBtn.textContent = 'Add to Cart';
-                        addBtn.classList.add('bg-[var(--t18-primary)]');
-                        addBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
-                        viewBtn.classList.add('hidden');
+                        addBtn.innerHTML = '<i class="bi bi-cart-plus-fill text-lg"></i> Add to Cart';
                         addBtn.classList.remove('hidden');
                     }
+
                     addBtn.dataset.variant = '';
                     addBtn.dataset.advancedVariant = variantData.id;
                 }
 
-                addBtn.addEventListener('click', function() {
-                    if (this.disabled || !selectedVariantId) return;
-                    const product_id = this.dataset.id;
-                    const advanced_variant = selectedVariantId;
+                if (addBtn) {
+                    addBtn.addEventListener('click', function() {
+                        if (this.disabled || !selectedVariantId) return;
+                        const product_id = this.dataset.id;
+                        const advanced_variant = selectedVariantId;
 
-                    if (window.utmTracker && currentUserId) {
-                        const colorName = document.querySelector(`.color-btn[data-color-id="${selectedVariantData?.colorId}"]`)?.dataset.colorName || '';
-                        const size = selectedVariantData?.size || '';
-                        window.utmTracker.trackAddToCart({
-                            productId: product_id,
-                            variantId: advanced_variant,
-                            variantType: 'advanced',
-                            variantLabel: `${colorName} - ${size}`,
-                            productName: productName,
-                            userId: currentUserId
-                        });
-                    }
-
-                    const originalText = this.innerHTML;
-                    const originalState = this.disabled;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-                    this.disabled = true;
-
-                    $.ajax({
-                        url: "shop/ajax/add-to-cart.php",
-                        type: "POST",
-                        data: {
-                            product_id: product_id,
-                            variant: '',
-                            advanced_variant: advanced_variant
-                        },
-                        success: function(result) {
-                            addBtn.innerHTML = originalText;
-                            addBtn.disabled = originalState;
-                            try {
-                                const response = result && JSON.parse(result);
-                                if (response && response.success) {
-                                    addBtn.classList.add('hidden');
-                                    viewBtn.classList.remove('hidden');
-                                    sizeButtons.forEach(btn => {
-                                        if (btn.dataset.variantId === advanced_variant) {
-                                            btn.dataset.inCart = '1';
-                                            btn.classList.add('bg-green-50', 'border-green-500', 'text-green-700');
-                                            btn.innerHTML = btn.innerHTML.replace(' ✓', '') + ' ✓';
-                                        }
-                                    });
-                                    showCustomToast(response.message || "Product added to cart successfully!", 'success');
-                                    if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
-                                    if (typeof getCartData === 'function') getCartData();
-                                } else {
-                                    const errorMessage = response?.message || "Failed to add product to cart.";
-                                    const isDuplicateError = errorMessage.includes('already') || errorMessage.includes('duplicate') || errorMessage.includes('exist');
-                                    if (!isDuplicateError) {
-                                        showCustomToast(errorMessage, 'error');
-                                    } else {
-                                        if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error parsing response:', e);
-                                showCustomToast('Error adding to cart', 'error');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('AJAX Error:', error);
-                            addBtn.innerHTML = originalText;
-                            addBtn.disabled = originalState;
-                            showCustomToast('Network error occurred', 'error');
+                        if (window.utmTracker && currentUserId) {
+                            const colorName = document.querySelector(`.color-btn[data-color-id="${selectedVariantData?.colorId}"]`)?.dataset.colorName || '';
+                            const size = selectedVariantData?.size || '';
+                            window.utmTracker.trackAddToCart({
+                                productId: product_id,
+                                variantId: advanced_variant,
+                                variantType: 'advanced',
+                                variantLabel: `${colorName} - ${size}`,
+                                productName: productName,
+                                userId: currentUserId
+                            });
                         }
+
+                        const originalText = this.innerHTML;
+                        const originalState = this.disabled;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+                        this.disabled = true;
+
+                        $.ajax({
+                            url: "shop/ajax/add-to-cart.php",
+                            type: "POST",
+                            data: {
+                                product_id: product_id,
+                                variant: '',
+                                advanced_variant: advanced_variant
+                            },
+                            success: function(result) {
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = originalState;
+                                try {
+                                    const response = result && JSON.parse(result);
+                                    if (response && response.success) {
+                                        addBtn.classList.add('hidden');
+                                        viewBtn.classList.remove('hidden');
+                                        sizeButtons.forEach(btn => {
+                                            if (btn.dataset.variantId === advanced_variant) {
+                                                btn.dataset.inCart = '1';
+                                            }
+                                        });
+                                        showCustomToast(response.message || "Product added to cart successfully!", 'success');
+                                        if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
+                                        if (typeof getCartData === 'function') getCartData();
+                                    } else {
+                                        const errorMessage = response?.message || "Failed to add product to cart.";
+                                        if (!(errorMessage.includes('already') || errorMessage.includes('duplicate') || errorMessage.includes('exist'))) {
+                                            showCustomToast(errorMessage, 'error');
+                                        } else {
+                                            if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing response:', e);
+                                    showCustomToast('Error adding to cart', 'error');
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = originalState;
+                                showCustomToast('Network error occurred', 'error');
+                            }
+                        });
                     });
-                });
+                }
+
                 const firstColor = document.querySelector('.color-btn');
                 if (firstColor) firstColor.click();
 
@@ -1345,14 +1562,14 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                         if (btn.dataset.variantId === urlVariant && !btn.disabled) btn.click();
                     });
                 }
+
             } else {
+                // [BASIC VARIANTS / SIMPLE PRODUCT]
                 const variantButtons = document.querySelectorAll('.variant-btn');
                 const mainImage = document.getElementById('mainProductImage');
                 const priceEl = document.querySelector('.productPrice');
                 const mrpEl = document.querySelector('.productMrp');
                 const stockEl = document.getElementById('stockDisplay');
-                const addBtn = document.getElementById('addToCartBtn');
-                const viewBtn = document.getElementById('viewCartBtn');
                 const variantNameEl = document.getElementById('variantName');
                 const productKey = "selectedVariant_<?= $id ?>";
                 let currentVariantId = '';
@@ -1362,6 +1579,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                 function selectVariant(btn) {
                     variantButtons.forEach(b => b.classList.remove('ring-2', 'ring-[var(--t18-primary)]'));
                     btn.classList.add('ring-2', 'ring-[var(--t18-primary)]');
+
                     const variantId = btn.dataset.variantId;
                     const variantImage = btn.dataset.variantImage;
                     const variantPrice = parseFloat(btn.dataset.price);
@@ -1377,6 +1595,7 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                     if (variantImage) mainImage.src = variantImage;
                     if (priceEl) priceEl.textContent = storeCurrencySymbol + variantPrice.toLocaleString();
                     if (mrpEl) mrpEl.textContent = (variantMrp && variantMrp > variantPrice) ? storeCurrencySymbol + variantMrp.toLocaleString() : '';
+
                     if (stockEl) {
                         stockEl.textContent = stockText;
                         let stockNumber = parseInt(stockText);
@@ -1391,101 +1610,94 @@ $hover_color = getData("hover_color", "seller_settings", "(seller_id='$sellerId'
                     }
                     if (variantNameEl) variantNameEl.textContent = variantName;
 
-                    if (addBtn && viewBtn) {
+                    if (addBtn && viewBtn && soldOutBtn) {
                         addBtn.dataset.variant = currentVariantType === 'main' ? '' : currentVariantId;
                         addBtn.dataset.advancedVariant = '';
                         let stockNumber = parseInt(stockText);
                         if (stockText.toLowerCase().includes('unlimited')) stockNumber = Infinity;
                         const isOutOfStock = stockNumber < 1;
 
+                        addBtn.classList.add('hidden');
+                        viewBtn.classList.add('hidden');
+                        soldOutBtn.classList.add('hidden');
+
                         if (inCart) {
-                            addBtn.classList.add('hidden');
                             viewBtn.classList.remove('hidden');
-                            addBtn.disabled = true;
                         } else if (isOutOfStock) {
-                            addBtn.disabled = true;
-                            addBtn.textContent = 'Sold Out';
-                            addBtn.classList.remove('bg-[var(--t18-primary)]');
-                            addBtn.classList.add('bg-gray-300', 'cursor-not-allowed');
-                            viewBtn.classList.add('hidden');
-                            addBtn.classList.remove('hidden');
+                            soldOutBtn.classList.remove('hidden');
                         } else {
-                            addBtn.disabled = false;
-                            addBtn.textContent = 'Add to Cart';
-                            addBtn.classList.add('bg-[var(--t18-primary)]');
-                            addBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
-                            viewBtn.classList.add('hidden');
                             addBtn.classList.remove('hidden');
+                            addBtn.disabled = false;
                         }
                     }
                     localStorage.setItem(productKey, btn.dataset.variantId);
                 }
 
-                addBtn.addEventListener('click', function() {
-                    if (this.disabled) return;
-                    const product_id = this.dataset.id;
-                    let variant = currentVariantType === 'main' ? '' : currentVariantId;
+                if (addBtn) {
+                    addBtn.addEventListener('click', function() {
+                        if (this.disabled) return;
+                        const product_id = this.dataset.id;
+                        let variant = currentVariantType === 'main' ? '' : currentVariantId;
 
-                    if (window.utmTracker && currentUserId) {
-                        window.utmTracker.trackAddToCart({
-                            productId: product_id,
-                            variantId: currentVariantId,
-                            variantType: currentVariantType,
-                            variantLabel: currentVariantLabel,
-                            productName: productName,
-                            userId: currentUserId
-                        });
-                    }
-
-                    const originalText = this.innerHTML;
-                    const originalState = this.disabled;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-                    this.disabled = true;
-
-                    $.ajax({
-                        url: "shop/ajax/add-to-cart.php",
-                        type: "POST",
-                        data: {
-                            product_id: product_id,
-                            variant: variant,
-                            advanced_variant: ''
-                        },
-                        success: function(result) {
-                            addBtn.innerHTML = originalText;
-                            addBtn.disabled = originalState;
-                            try {
-                                const response = result && JSON.parse(result);
-                                if (response && response.success) {
-                                    addBtn.classList.add('hidden');
-                                    viewBtn.classList.remove('hidden');
-                                    variantButtons.forEach(btn => {
-                                        if (btn.dataset.variantId === currentVariantId) btn.dataset.inCart = '1';
-                                    });
-                                    showCustomToast(response.message || "Product added to cart successfully!", 'success');
-                                    if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
-                                    if (typeof getCartData === 'function') getCartData();
-                                } else {
-                                    const errorMessage = response?.message || "Failed to add product to cart.";
-                                    const isDuplicateError = errorMessage.includes('already') || errorMessage.includes('duplicate') || errorMessage.includes('exist');
-                                    if (!isDuplicateError) {
-                                        showCustomToast(errorMessage, 'error');
-                                    } else {
-                                        if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error parsing response:', e);
-                                showCustomToast('Error adding to cart', 'error');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('AJAX Error:', error);
-                            addBtn.innerHTML = originalText;
-                            addBtn.disabled = originalState;
-                            showCustomToast('Network error occurred', 'error');
+                        if (window.utmTracker && currentUserId) {
+                            window.utmTracker.trackAddToCart({
+                                productId: product_id,
+                                variantId: currentVariantId,
+                                variantType: currentVariantType,
+                                variantLabel: currentVariantLabel,
+                                productName: productName,
+                                userId: currentUserId
+                            });
                         }
+
+                        const originalText = this.innerHTML;
+                        const originalState = this.disabled;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+                        this.disabled = true;
+
+                        $.ajax({
+                            url: "shop/ajax/add-to-cart.php",
+                            type: "POST",
+                            data: {
+                                product_id: product_id,
+                                variant: variant,
+                                advanced_variant: ''
+                            },
+                            success: function(result) {
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = originalState;
+                                try {
+                                    const response = result && JSON.parse(result);
+                                    if (response && response.success) {
+                                        addBtn.classList.add('hidden');
+                                        viewBtn.classList.remove('hidden');
+                                        variantButtons.forEach(btn => {
+                                            if (btn.dataset.variantId === currentVariantId) btn.dataset.inCart = '1';
+                                        });
+                                        showCustomToast(response.message || "Product added to cart successfully!", 'success');
+                                        if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
+                                        if (typeof getCartData === 'function') getCartData();
+                                    } else {
+                                        const errorMessage = response?.message || "Failed to add product to cart.";
+                                        if (!(errorMessage.includes('already') || errorMessage.includes('duplicate') || errorMessage.includes('exist'))) {
+                                            showCustomToast(errorMessage, 'error');
+                                        } else {
+                                            if (typeof getProductCountAndPrice === 'function') getProductCountAndPrice();
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing response:', e);
+                                    showCustomToast('Error adding to cart', 'error');
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                addBtn.innerHTML = originalText;
+                                addBtn.disabled = originalState;
+                                showCustomToast('Network error occurred', 'error');
+                            }
+                        });
                     });
-                });
+                }
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlVariant = urlParams.get('variation');
